@@ -243,24 +243,48 @@ if (!empty($_POST['bn_save']) || !empty($_POST['bn_save_print']) || !empty($_POS
             continue;
         }
 
-        // It's a normal form field, save to lbf_data.
-        if ($formid) { // existing form
-            if ($value === '') {
-                $query = "DELETE FROM lbf_data WHERE " .
-                    "form_id = ? AND field_id = ?";
-                sqlStatement($query, array($formid, $field_id));
-            } else {
-                $query = "REPLACE INTO lbf_data SET field_value = ?, " .
-                    "form_id = ?, field_id = ?";
-                sqlStatement($query, array($value, $formid, $field_id));
+        if ($field_id === 'BSA') {
+            try {
+                $height = $_POST["form_Height"];
+                $weight = $_POST["form_Weight"];
+                $bsa_value = '';
+                if ($height !== '' && $weight !== '') {
+                    $bsa_value = round(sqrt(((int) $height * (int) $weight) / 3600), 2);
+                }
+                if ($formid) { // existing form
+                    $query = "REPLACE INTO lbf_data SET field_value = ?, " .
+                        "form_id = ?, field_id = ?";
+                    sqlStatement($query, array($bsa_value, $formid, $field_id));
+                } else { // new form
+                    sqlStatement(
+                        "INSERT INTO lbf_data " .
+                        "( form_id, field_id, field_value ) VALUES ( ?, ?, ? )",
+                        array($newid, $field_id, $bsa_value)
+                    );
+                }
+            } catch (Exception $e) {
+                echo 'BSA calculation caught exception: ',  $e->getMessage(), "\n";
             }
-        } else { // new form
-            if ($value !== '') {
-                sqlStatement(
-                    "INSERT INTO lbf_data " .
-                    "( form_id, field_id, field_value ) VALUES ( ?, ?, ? )",
-                    array($newid, $field_id, $value)
-                );
+        } else {
+            // It's a normal form field, save to lbf_data.
+            if ($formid) { // existing form
+                if ($value === '') {
+                    $query = "DELETE FROM lbf_data WHERE " .
+                        "form_id = ? AND field_id = ?";
+                    sqlStatement($query, array($formid, $field_id));
+                } else {
+                    $query = "REPLACE INTO lbf_data SET field_value = ?, " .
+                        "form_id = ?, field_id = ?";
+                    sqlStatement($query, array($value, $formid, $field_id));
+                }
+            } else { // new form
+                if ($value !== '') {
+                    sqlStatement(
+                        "INSERT INTO lbf_data " .
+                        "( form_id, field_id, field_value ) VALUES ( ?, ?, ? )",
+                        array($newid, $field_id, $value)
+                    );
+                }
             }
         }
     }
